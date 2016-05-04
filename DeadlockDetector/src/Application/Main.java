@@ -17,9 +17,7 @@ public class Main {
 				String taskname = strings[0];
 				Task T = new Task(taskname);
 				
-				for(int i = 1; i  < strings.length; i++){
-					T.addCommand(strings[i]);
-				}
+				
 				M.addTask(T);
 				
 			}

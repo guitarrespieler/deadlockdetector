@@ -10,5 +10,12 @@ public class Manager {
 	public void addTask(Task t){
 		listOfTasks.add(t);
 	}
+	public Resource askForResource(Task T, String resourceName){
+		return new Resource();
+	}
+	
+	public void freeResource(Resource R){
+		
+	}
 	
 }
