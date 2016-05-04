@@ -23,7 +23,8 @@ public class Manager {
 		if(T.commands.size() == 0 && T.waitingForTheseResources.size() == 0){
 			listOfTasks.remove(T);
 			return;
-		}		
+		}	
+		boolean successful = false;
 		String nextCmd = T.commands.get(0);
 		String[] chars = nextCmd.split("");
 		if(chars.length == 1){  //NO-OP method
@@ -34,16 +35,28 @@ public class Manager {
 			freeResource(getResourceByName(chars[1] + chars[2]));
 		}
 		if(chars[0].equals("+")){
-			askForResource(T,chars[1] + chars[2]);
+			successful = askForResource(T,chars[1] + chars[2]);
 		}
-		
-		
+		if(!successful){
+			System.out.println(T.name + "," + );
+			
+		}
 	}
 	
-	private void askForResource(Task T, String resourceName){
+	private boolean checkForDeadLock(/*Task actualTask,Task searchedTask, Resource actualRes, Resource wantedRes*/){
+		//T szeretné használni R-t. El kell indulni és meg kell nézni, hogy T-t megtaláljuk-e benne.
+		//ide kéne valami rekurzív függvény, mélységében be kellene járni a fát.
+		//Sok sikert hozzá, Tibor.
+		//Ha ez meglesz, valószínûleg a feladat oroszlánrészével meg leszel.
+		return false;
+	}
+	/**
+	 * @return false if asking was not successful
+	 */
+	private boolean askForResource(Task T, String resourceName){
 		Resource R = getResourceByName(resourceName);
 		if(R != null){
-			if(R.thisTaskUsesMe != null){
+			if(R.thisTaskUsesMe != null && !checkForDeadLock()){
 				T.waitingForTheseResources.add(R);
 			}
 			else if(R.thisTaskUsesMe == null){
