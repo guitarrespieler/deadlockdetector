@@ -20,23 +20,47 @@ public class Manager {
 	}
 	
 	public void run(Task T){
-		String nextCmd = T.nextCommand();
-		String[] chars = nextCmd.split("");
-		if(chars.length == 1)  //NO-OP method
+		if(T.commands.size() == 0 && T.waitingForTheseResources.size() == 0){
+			listOfTasks.remove(T);
 			return;
-		if(chars[1].equals("-")){
-			freeResource(R);
+		}		
+		String nextCmd = T.commands.get(0);
+		String[] chars = nextCmd.split("");
+		if(chars.length == 1){  //NO-OP method
+			T.commands.remove(0);
+			return;
+		}
+		if(chars[0].equals("-")){
+			freeResource(getResourceByName(chars[1] + chars[2]));
+		}
+		if(chars[0].equals("+")){
+			askForResource(T,chars[1] + chars[2]);
 		}
 		
 		
 	}
 	
-	private Resource askForResource(Task T, String resourceName){
-		return new Resource();
+	private void askForResource(Task T, String resourceName){
+		Resource R = getResourceByName(resourceName);
+		if(R != null){
+			if(R.thisTaskUsesMe != null){
+				T.waitingForTheseResources.add(R);
+			}
+			else if(R.thisTaskUsesMe == null){
+				R.thisTaskUsesMe = T;
+			}
+			return;
+		}
+		//if there was no resource like this before
+		R = new Resource(resourceName);
+		listOfResources.add(R);
+		R.thisTaskUsesMe = T;	
 	}
 	
 	private void freeResource(Resource R){
-		
+		if(R == null)
+			return;
+		R.thisTaskUsesMe = null;		
 	}
 	
 	/**
@@ -46,7 +70,7 @@ public class Manager {
 		Iterator<Resource> iterator = listOfResources.iterator();
 		while (iterator.hasNext()) {
 			Resource R = iterator.next();
-			if(R.getResoureName().equals(resName))
+			if(R.name.equals(resName))
 				return R;			
 		}
 		return null;

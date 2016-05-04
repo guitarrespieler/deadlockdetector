@@ -14,9 +14,7 @@ public class Task {
 		commands.add(cmd);
 	}
 
-	public String nextCommand(){
-		if(commands.size() != 0)
-			return commands.remove(0);
-		return null;
+	public void addResourceToQueue(Resource R){
+		waitingForTheseResources.add(R);
 	}
 }
