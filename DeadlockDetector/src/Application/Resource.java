@@ -1,8 +1,13 @@
 package Application;
 
 public class Resource {
-	String name = "";
-	Task thisTaskUsesMe = null;
+	private String name = "";
+	private Task thisTaskUsesMe = null;	
 	
-	
+	public String getResoureName(){
+		return name;
+	}
+	public Task getWhoUsesThisResource(){
+		return thisTaskUsesMe;
+	}
 }

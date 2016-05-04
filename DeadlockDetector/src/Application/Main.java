@@ -16,7 +16,8 @@ public class Main {
 				String[] strings = line.split(",");
 				String taskname = strings[0];
 				Task T = new Task(taskname);
-				
+				for(int i = 0; i < strings.length; i++) //adding commands to the task
+					T.addCommand(strings[i]);				
 				
 				M.addTask(T);
 				

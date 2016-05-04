@@ -13,6 +13,7 @@ public class Task {
 	public void addCommand(String cmd){
 		commands.add(cmd);
 	}
+
 	public String nextCommand(){
 		if(commands.size() != 0)
 			return commands.remove(0);
