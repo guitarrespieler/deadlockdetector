@@ -7,4 +7,8 @@ public class Manager {
 	ArrayList<Resource>listOfResources = new ArrayList<>();
 	ArrayList<String> outpus = new ArrayList<>();
 	
+	public void addTask(Task t){
+		listOfTasks.add(t);
+	}
+	
 }
