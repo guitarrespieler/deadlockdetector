@@ -6,15 +6,9 @@ public class Task {
 	String name = "";
 	ArrayList<String>commands = new ArrayList<>();
 	ArrayList<Resource> waitingForTheseResources = new ArrayList<>();
+	int nextCommand = 0;
 	
-	public Task(String taskname){
-		name = taskname;
-	}
-	public void addCommand(String cmd){
-		commands.add(cmd);
-	}
-
-	public void addResourceToQueue(Resource R){
-		waitingForTheseResources.add(R);
+	public Task(String taskName){
+		name = taskName;
 	}
 }

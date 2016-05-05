@@ -6,87 +6,124 @@ import java.util.Iterator;
 public class Manager {
 	ArrayList<Task> listOfTasks = new ArrayList<>();
 	ArrayList<Resource>listOfResources = new ArrayList<>();
-	ArrayList<String> outpus = new ArrayList<>();
+	ArrayList<String> output = new ArrayList<>();
 	
-	public void RunAll(){
+	public void runAll(){
 		while(listOfTasks.size() != 0){
-			for(int i = 0; i < listOfTasks.size(); i++){// 1 lépés
-				Task temp = listOfTasks.get(i);
-				run(temp);				
+			for(int i = 0; i < listOfTasks.size(); i++){
+				run(listOfTasks.get(i));
 			}
-		}
 			
-	}
-	
-	public void run(Task T){
-		if(T.commands.size() == 0){
-			freeAllResources(T);
-			listOfTasks.remove(T);
-			return;
-		}	
-		boolean successful = false;
-		String nextCmd = T.commands.get(0);
-		String[] chars = nextCmd.split("");
-		if(chars.length == 1){  //NO-OP method
-			T.commands.remove(0);
-			return;
-		}
-		if(chars[0].equals("-")){//free resource ( for example "-R1" )
-			freeResource(getResourceByName(chars[1] + chars[2]));
-		}
-		if(chars[0].equals("+")){//ask for resource ( for example "+R5" )
-			successful = askForResource(T,chars[1] + chars[2]);
-		}
-		if(!successful){
-			System.out.println(T.name + "," + );
 			
 		}
 	}
 	
-	private boolean checkForDeadLock(/*Task actualTask,Task searchedTask, Resource actualRes, Resource wantedRes*/){
-		//T szeretné használni R-t. El kell indulni és meg kell nézni, hogy T-t megtaláljuk-e benne.
-		//ide kéne valami rekurzív függvény, mélységében be kellene járni a fát.
-		//Sok sikert hozzá, Tibor.
-		//Ha ez meglesz, valószínûleg a feladat oroszlánrészével meg leszel.
-		return false;
+	private void run(Task T){
+		if(T.commands.size() == 0){			
+			freeAllocatedResources(T);//A taszkhoz tartozó erõforrás(oka)t felszabadítja
+			listOfTasks.remove(T); //kivesszük a listából
+			return;
+		}
+		String cmd = T.commands.get(T.nextCommand);
+		if(cmd.equals("0"))
+			return;
+		String[] pieces = cmd.split("");
+		
+		if(pieces[0].equals("-")){
+			freeResource(pieces[1] + pieces[2]);
+		}
+		allocateResource(T, pieces[1]+pieces[2]);
+		
 	}
 	/**
-	 * @return false if asking was not successful
+	 * Lefoglalja a T taszk számára a kívánt nevû erõforrást.
+	 * Ha nem létezik, létrehozzuk.
+	 * Ha létezik, megnézzük, hogy használatban van-e.
+	 * Ha nincs, lefoglaljuk. 
+	 * Ha használatban van, megnézzük, hogy a lefoglalása
+	 * okozna-e holtpontot
+	 * Ha nem okozna, lefoglaljuk.
+	 * Ha okozna, töröljük a foglalást.
 	 */
-	private boolean askForResource(Task T, String resourceName){
-		Resource R = getResourceByName(resourceName);
-		if(R != null){
-			if(R.thisTaskUsesMe != null && !checkForDeadLock()){
-				T.waitingForTheseResources.add(R);
-			}
-			else if(R.thisTaskUsesMe != null && checkForDeadLock()){
-				T.commands.remove(0);//töröljük a parancsot, holtpontot okozna
-			}
-			else if(R.thisTaskUsesMe == null){
-				R.thisTaskUsesMe = T;
-			}
+	private void allocateResource(Task T, String resourceName){
+		Resource R;		
+		if((R= getResourceByName(resourceName)) == null){
+			R = new Resource(resourceName);
+			R.addWaitingTask(T);//hozzáadja R megfelelõ listájához
+			R.nextUserTask();//errõl a listáról behúzza a következõ taszkot
+			listOfResources.add(R);
+			T.nextCommand++; //növeljük a számlálót, ez a parancs nem blokkolódik, nem kell már, hogy fusson
 			return;
 		}
-		//if there was no resource like this before
-		R = new Resource(resourceName);
-		listOfResources.add(R);
-		R.thisTaskUsesMe = T;	
+		//Ha R != null, akkor van erõforrás ilyen néven
+		if(R.getWhichTaskusesThisResource() == null){ //ha nem használja senki, akkor a lefoglalása
+			R.addWaitingTask(T);			 // nem okoz deadlockot, így lefoglalhatjuk.
+			R.nextUserTask();
+			T.nextCommand++;						//növeljük a számlálót
+			return;
+		}
+		//ha ez az erõforrás használatban van, megnézzük, hogy okoz-e
+		//holtpontot a lefoglalása
+		
+		boolean causesDeadlock = false;
+		causesDeadlock = checkForDeadlock(null,T,R);
+		if(causesDeadlock){
+			output.add(T.name + "," + T.nextCommand + "," + R.name);
+			T.nextCommand++;//növeljük a számlálót, ez a rész nem futhat le
+			return;
+		}
+		if(!causesDeadlock){
+			if(!T.waitingForTheseResources.contains(R)){
+				R.addWaitingTask(T);
+				T.waitingForTheseResources.add(R);//ha nem tartalmazza, hozzáadjuk a listához
+				//itt nem növeljük a számlálót
+			}				
+		}		
 	}
 	
-	private void freeResource(Resource R){
-		if(R == null)
-			return;
-		R.thisTaskUsesMe = null;		
+	/**
+	 * Ellenõrzi, hogy az erõforrás lefoglalásával létrejön-e holtpont.
+	 * @return true ha létrejön holtpont, false egyébként
+	 */
+	private boolean checkForDeadlock(Task T, Task searchedTask,Resource wantedResource){
+		if(T == searchedTask)
+			return true;
+		if(wantedResource.getWhichTaskusesThisResource() == null)//ha nem használja senki, akkor a lefoglalása
+			return false;										// nem okoz deadlockot, így lefoglalhatjuk.
+		if(T == null){//legelsõ meghíváskor fog ez az ág lefutni
+			return checkForDeadlock(wantedResource.getWhichTaskusesThisResource(),
+					searchedTask, wantedResource);
+		}
+		boolean value = false;
+		for(int i = 0; i < T.waitingForTheseResources.size(); i++){
+			Resource tempRes = T.waitingForTheseResources.get(i);
+			Task tempTask = tempRes.getWhichTaskusesThisResource();
+			if(tempTask == null)
+				continue;
+			value = checkForDeadlock(tempTask, searchedTask, wantedResource);
+			if(value) // ha igaz, akkor megtaláltuk, térjünk vissza vele!
+				return value;			
+		}			
+		return false;
 	}
-	private void freeAllResources(Task T){
+	
+	private void freeResource(String resourceName){
+		Resource R = getResourceByName(resourceName);
+		R.nextUserTask();
+	}
+	
+	/**
+	 * A taszk által használt erõforrások felszabadítása
+	 * @param T
+	 */
+	private void freeAllocatedResources(Task T){
 		Iterator<Resource> it = listOfResources.iterator();
 		while(it.hasNext()){
 			Resource temp = it.next();
-			if(temp.thisTaskUsesMe == T)
-				freeResource(temp);
-		}
+			if(temp.getWhichTaskusesThisResource() == T) //ha ez a taszk használja
+				temp.deleteUserTask();					//felszabadítjuk
+		}		
 	}
-	
 	/**
 	 * @return null if there's no Resource with the given name.
 	 */
