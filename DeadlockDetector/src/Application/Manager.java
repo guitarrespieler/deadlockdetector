@@ -10,17 +10,17 @@ public class Manager {
 	
 	public void RunAll(){
 		while(listOfTasks.size() != 0){
-			for(int i = 0; i < listOfTasks.size(); i++){
+			for(int i = 0; i < listOfTasks.size(); i++){// 1 lépés
 				Task temp = listOfTasks.get(i);
-				run(temp);
-				
+				run(temp);				
 			}
 		}
 			
 	}
 	
 	public void run(Task T){
-		if(T.commands.size() == 0 && T.waitingForTheseResources.size() == 0){
+		if(T.commands.size() == 0){
+			freeAllResources(T);
 			listOfTasks.remove(T);
 			return;
 		}	
@@ -31,10 +31,10 @@ public class Manager {
 			T.commands.remove(0);
 			return;
 		}
-		if(chars[0].equals("-")){
+		if(chars[0].equals("-")){//free resource ( for example "-R1" )
 			freeResource(getResourceByName(chars[1] + chars[2]));
 		}
-		if(chars[0].equals("+")){
+		if(chars[0].equals("+")){//ask for resource ( for example "+R5" )
 			successful = askForResource(T,chars[1] + chars[2]);
 		}
 		if(!successful){
@@ -59,6 +59,9 @@ public class Manager {
 			if(R.thisTaskUsesMe != null && !checkForDeadLock()){
 				T.waitingForTheseResources.add(R);
 			}
+			else if(R.thisTaskUsesMe != null && checkForDeadLock()){
+				T.commands.remove(0);//töröljük a parancsot, holtpontot okozna
+			}
 			else if(R.thisTaskUsesMe == null){
 				R.thisTaskUsesMe = T;
 			}
@@ -74,6 +77,14 @@ public class Manager {
 		if(R == null)
 			return;
 		R.thisTaskUsesMe = null;		
+	}
+	private void freeAllResources(Task T){
+		Iterator<Resource> it = listOfResources.iterator();
+		while(it.hasNext()){
+			Resource temp = it.next();
+			if(temp.thisTaskUsesMe == T)
+				freeResource(temp);
+		}
 	}
 	
 	/**
