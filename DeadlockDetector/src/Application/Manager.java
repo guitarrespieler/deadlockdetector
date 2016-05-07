@@ -3,63 +3,77 @@ package Application;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+/**
+ * Ez az osztály szimulálja a holtpontdetektálást.
+ * Futtatja a taszkokat, erõforrásokat lefoglal, 
+ * felszabadít, holtpontot ellenõriz.
+ * 
+ * @author zsigatibor
+ */
 public class Manager {
 	ArrayList<Task> listOfTasks = new ArrayList<>();
 	ArrayList<Resource>listOfResources = new ArrayList<>();
 	ArrayList<String> output = new ArrayList<>();
 	
+	/**
+	 * Taszkokat futtatja.
+	 */
 	public void runAll(){
-		while(listOfTasks.size() != 0){
+		int x = 0;
+		while(x++ < 5000){
 			for(int i = 0; i < listOfTasks.size(); i++){
 				run(listOfTasks.get(i));
 			}
-			
-			
 		}
 	}
 	
 	private void run(Task T){
-		if(T.commands.size() == 0){			
+		if(T.nextCommand > T.commands.size()){			
 			freeAllocatedResources(T);//A taszkhoz tartozó erõforrás(oka)t felszabadítja
-			listOfTasks.remove(T); //kivesszük a listából
+//			listOfTasks.remove(T); //kivesszük a listából
 			return;
 		}
-		String cmd = T.commands.get(T.nextCommand);
-		if(cmd.equals("0"))
+		String nev = T.name;//teszteléshez kell
+		String cmd = T.commands.get(T.nextCommand-1);
+		if(cmd.equals("0")){
+			T.nextCommand++;
 			return;
+		}
+			
 		String[] pieces = cmd.split("");
 		
 		if(pieces[0].equals("-")){
-			freeResource(pieces[1] + pieces[2]);
+			freeResource(T,pieces[1] + pieces[2]);
+			T.nextCommand++;
+			return;
 		}
-		allocateResource(T, pieces[1]+pieces[2]);
+		if(pieces[0].equals("+")){
+			allocateResource(T, pieces[1]+pieces[2]);
+		}
 		
 	}
 	/**
 	 * Lefoglalja a T taszk számára a kívánt nevû erõforrást.
 	 * Ha nem létezik, létrehozzuk.
-	 * Ha létezik, megnézzük, hogy használatban van-e.
-	 * Ha nincs, lefoglaljuk. 
+	 * Ha létezik, megnézzük, hogy használatban van-e: 
+	 * ha nincs, lefoglaljuk. 
 	 * Ha használatban van, megnézzük, hogy a lefoglalása
 	 * okozna-e holtpontot
 	 * Ha nem okozna, lefoglaljuk.
 	 * Ha okozna, töröljük a foglalást.
 	 */
 	private void allocateResource(Task T, String resourceName){
-		Resource R;		
-		if((R= getResourceByName(resourceName)) == null){
+		Resource R = getResourceByName(resourceName);		
+		if(R == null){
 			R = new Resource(resourceName);
 			R.addWaitingTask(T);//hozzáadja R megfelelõ listájához
-			R.nextUserTask();//errõl a listáról behúzza a következõ taszkot
 			listOfResources.add(R);
-			T.nextCommand++; //növeljük a számlálót, ez a parancs nem blokkolódik, nem kell már, hogy fusson
 			return;
 		}
 		//Ha R != null, akkor van erõforrás ilyen néven
-		if(R.getWhichTaskusesThisResource() == null){ //ha nem használja senki, akkor a lefoglalása
-			R.addWaitingTask(T);			 // nem okoz deadlockot, így lefoglalhatjuk.
-			R.nextUserTask();
-			T.nextCommand++;						//növeljük a számlálót
+		if(R.getWhichTaskusesThisResource() == null){ 	//ha nem használja senki, akkor a lefoglalása
+			R.addWaitingTask(T);			 			// nem okoz deadlockot, így lefoglalhatjuk.
+//			T.nextCommand++;							//növeljük a számlálót
 			return;
 		}
 		//ha ez az erõforrás használatban van, megnézzük, hogy okoz-e
@@ -82,15 +96,15 @@ public class Manager {
 	}
 	
 	/**
-	 * Ellenõrzi, hogy az erõforrás lefoglalásával létrejön-e holtpont.
+	 * Rekurzívan ellenõrzi, hogy az erõforrás lefoglalásával létrejönne-e holtpont.
 	 * @return true ha létrejön holtpont, false egyébként
 	 */
 	private boolean checkForDeadlock(Task T, Task searchedTask,Resource wantedResource){
 		if(T == searchedTask)
 			return true;
-		if(wantedResource.getWhichTaskusesThisResource() == null)//ha nem használja senki, akkor a lefoglalása
-			return false;										// nem okoz deadlockot, így lefoglalhatjuk.
-		if(T == null){//legelsõ meghíváskor fog ez az ág lefutni
+		if(wantedResource.getWhichTaskusesThisResource() == null)	//ha nem használja senki, akkor a lefoglalása
+			return false;											// nem okoz deadlockot, így lefoglalhatjuk.
+		if(T == null){												//legelsõ meghíváskor fog ez az ág lefutni
 			return checkForDeadlock(wantedResource.getWhichTaskusesThisResource(),
 					searchedTask, wantedResource);
 		}
@@ -101,31 +115,36 @@ public class Manager {
 			if(tempTask == null)
 				continue;
 			value = checkForDeadlock(tempTask, searchedTask, wantedResource);
-			if(value) // ha igaz, akkor megtaláltuk, térjünk vissza vele!
+			if(value) 												// ha igaz, akkor megtaláltuk, térjünk vissza vele!
 				return value;			
 		}			
 		return false;
 	}
 	
-	private void freeResource(String resourceName){
+	/**
+	 * Adott erõforrás felszabadítása.
+	 */
+	private void freeResource(Task T,String resourceName){
 		Resource R = getResourceByName(resourceName);
-		R.nextUserTask();
+		//lehet, hogy holtpont miatt kilõttük, de fel akarja szabadítani... Ezt kezeli le a második feltétel
+		if(R != null &&(R.getWhichTaskusesThisResource() == T)) 
+			R.deleteUserTask();		
 	}
 	
 	/**
-	 * A taszk által használt erõforrások felszabadítása
-	 * @param T
+	 * A taszk által használt összes erõforrás felszabadítása
 	 */
 	private void freeAllocatedResources(Task T){
 		Iterator<Resource> it = listOfResources.iterator();
 		while(it.hasNext()){
 			Resource temp = it.next();
-			if(temp.getWhichTaskusesThisResource() == T) //ha ez a taszk használja
-				temp.deleteUserTask();					//felszabadítjuk
+			if(temp.getWhichTaskusesThisResource() == T) 			//ha ez a taszk használja
+				temp.deleteUserTask();								//felszabadítjuk
 		}		
 	}
 	/**
-	 * @return null if there's no Resource with the given name.
+	 * @return null, ha nincs erõforrás a paraméterül kapott névvel, 
+	 * egyébként az adott nevû erõforrást adja vissza.
 	 */
 	private Resource getResourceByName(String resName){
 		Iterator<Resource> iterator = listOfResources.iterator();
@@ -137,8 +156,11 @@ public class Manager {
 		return null;
 	}
 	
-	public void addTask(Task t){
-		listOfTasks.add(t);
+	/**
+	 * A paraméterül kapott taszkot hozzáadja a Manager listájához
+	 */
+	public void addTask(Task T){
+		listOfTasks.add(T);
 	}
 	
 }
